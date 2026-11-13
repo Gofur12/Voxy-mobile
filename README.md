@@ -1,44 +1,27 @@
-# Voxy Mobile — Stage 28: First integrated heightfield LOD path
+# Voxy Mobile — Stage 29: Camera-relative distant LOD projection
 
-Experimental standalone terrain LOD renderer for Minecraft Java 1.20.1 + Fabric, targeting Android Zalith Launcher, MobileGlues, OpenGL ES 3.2 and Adreno-class hardware.
+Experimental client-side terrain LOD prototype for Minecraft Java 1.20.1 Fabric, targeting Android Zalith Launcher with MobileGlues / OpenGL ES 3.2.
 
-## Stage 28 changes
+## Stage 29 changes
 
-- Wired the existing quadtree `LodSelector` and `TerrainLodMesher` into the actual Fabric world-render callback. Stage 27 contained these core classes but never called them from the live renderer.
-- Added a bounded 128-chunk snapshot history. Chunk data remains available for distant LOD after vanilla unloads a chunk, and is cleared on world/dimension identity changes.
-- Added quadtree tile rendering with smaller-tile fallback when the retained history does not fully cover a coarse tile.
-- Builds sampled heightfield tiles and draws them only outside the current vanilla view-distance boundary.
-- Removed the Stage 27 full voxel-mesh overlay from the live backend. Its pseudo-random material-ID color hash caused the conspicuous pink/red/yellow block overlay and was not a valid LOD implementation.
-- Replaced the random hash fragment color with a stable terrain tint for this initial heightfield pass.
-- Keeps GPU mesh creation, upload and deletion on the render thread.
+- Replaces the inherited Minecraft/Iris projection matrix with a camera-relative LOD projection using a 2048-block far plane.
+- Builds the view rotation from the active Minecraft camera quaternion; tile translations remain camera-relative to preserve float precision.
+- Rejects transient invalid camera frames without tearing down and recreating the GLES backend.
+- Clamps LOD fragment depth to the far plane. LOD therefore fills sky pixels while remaining behind nearer vanilla terrain and entities under the existing depth test.
+- Keeps the 128-chunk retained history, bounded tile cache, and GLES 3.2 shader path.
 
 ## Build
 
-Run dependency-free checks:
+Run GitHub Actions workflow **Fabric build**. It builds with Java 17 and uploads `VoxyMobileCore-0.1.0-stage29.jar` as the artifact `VoxyMobileCore-stage29-fabric-1.20.1`.
 
-```sh
-./scripts/verify-all.sh
-```
+Install only that JAR in the Minecraft `mods` folder. Do not install the sources JAR. The source ZIP itself is not an installable mod.
 
-Build the installable Fabric JAR (requires Gradle 8.6+ and network access to resolve Minecraft/Fabric/Loom):
+## Runtime requirements
 
-```sh
-gradle --no-daemon clean build
-```
+- Minecraft 1.20.1
+- Fabric Loader >= 0.15.0
+- Fabric API 0.92.2+1.20.1
+- Java 17 or newer (Java 21 is compatible)
+- OpenGL ES 3.2-compatible backend (MobileGlues on the intended Android target)
 
-Expected JAR: `build/libs/VoxyMobileCore-0.1.0-stage28.jar`. GitHub Actions uploads this JAR as an artifact. The source ZIP itself is not an installable mod.
-
-## Validation status
-
-- Dependency-free core smoke tests and static integration checks: PASS in the packaging environment.
-- Fabric/Loom compilation and remapped JAR verification: NOT RUN in this environment. Run the included GitHub Actions workflow to compile against the actual 1.20.1 Fabric API.
-- POCO X3 Pro / Zalith / MobileGlues in-game test: NOT RUN.
-
-## Known limitations
-
-- This is the first live heightfield LOD path, not feature parity with Voxy or Distant Horizons. It uses a bounded history of chunks the player has actually visited; it cannot invent terrain for never-loaded chunks.
-- Height sampling uses the highest non-air block, so forests, tall structures, water and caves can produce imperfect silhouettes.
-- LOD uses a stable terrain tint rather than biome-aware block textures, lighting, fluids or foliage.
-- Heightfield mesh generation currently happens on the render thread when a tile is first needed; later work should move this build to a bounded worker queue.
-- Frustum culling, seamless vanilla handoff, persistent disk cache, settings GUI and detailed block/material shading are not yet implemented.
-- The shader and GL-state interaction still require an in-game GLES 3.2 validation pass.
+This remains an experimental heightfield LOD prototype, not a full Voxy-equivalent voxel renderer. It has not been device-tested by the project authoring environment; visual validation on the target device is still required.

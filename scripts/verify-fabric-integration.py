@@ -8,6 +8,8 @@ client = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/VoxyMobileClient.
 lod = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/LodHeightfieldRenderer.java').read_text()
 backend = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/LwjglVoxyRenderBackend.java').read_text()
 mixin = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/mixin/ClientWorldMixin.java').read_text()
+camera = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/MinecraftCameraFrame.java').read_text()
+shader = (root / 'src/main/resources/assets/voxymobile/shaders/voxel_terrain.vsh').read_text()
 checks = {
     'world identity reset on chunk load': 'ensureWorld(world);' in chunk.split('public static void onChunkLoad', 1)[1].split('public static void onChunkUnload', 1)[0],
     'world identity reset on chunk unload': 'ensureWorld(world);' in chunk.split('public static void onChunkUnload', 1)[1].split('public static void onBlockChanged', 1)[0],
@@ -23,6 +25,9 @@ checks = {
     'LOD selector is wired into live renderer': 'selector.select(cameraX, cameraZ' in lod and 'TerrainLodMesher.build' in lod,
     'LOD renderer draws retained snapshots': 'VoxyChunkBridge.getLodSnapshots()' in backend and 'lodRenderer.render' in backend,
     'LOD falls back to smaller tiles for sparse history': 'drawWithFallback' in lod and 'tile.level - 1' in lod,
+    'LOD uses an independent extended far-plane projection': 'LOD_FAR_PLANE = 2048.0f' in camera and 'perspective(' in camera,
+    'invalid camera frames are skipped without backend teardown': 'return null' in camera and 'cameraRotation.lengthSquared()' in camera,
+    'LOD depth is clamped behind vanilla geometry': 'clipPosition.z = clipPosition.w * 0.99998' in shader,
 }
 for label, passed in checks.items():
     print(('PASS' if passed else 'FAIL') + ': ' + label)

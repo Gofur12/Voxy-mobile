@@ -27,7 +27,7 @@ jobs:
       - name: Upload remapped Fabric JAR
         uses: actions/upload-artifact@v4
         with:
-          name: VoxyMobileCore-fabric-1.20.1
-          path: build/libs/VoxyMobileCore-0.1.0-stage26.jar
+          name: VoxyMobileCore-stage29-fabric-1.20.1
+          path: build/libs/VoxyMobileCore-0.1.0-stage29.jar
           if-no-files-found: error
           retention-days: 14

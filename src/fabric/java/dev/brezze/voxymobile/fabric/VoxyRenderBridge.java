@@ -44,7 +44,8 @@ public final class VoxyRenderBridge {
         }
         if (current != null) {
             try {
-                current.renderFrame(context, MinecraftCameraFrame.capture(context));
+                dev.brezze.voxymobile.render.CameraFrame camera = MinecraftCameraFrame.capture(context);
+                if (camera != null) current.renderFrame(context, camera);
             } catch (RuntimeException | LinkageError failure) {
                 // A renderer fault must not take down the whole Minecraft client.
                 // We are inside the world-render callback, so teardown is still on the GL thread.
