@@ -45,6 +45,8 @@ public final class VoxyRenderBridge {
         if (current != null) {
             try {
                 dev.brezze.voxymobile.render.CameraFrame camera = MinecraftCameraFrame.capture(context);
+                // Projection matrices can be transiently invalid during world transitions.
+                // Skip that frame instead of destroying a healthy GLES backend.
                 if (camera != null) current.renderFrame(context, camera);
             } catch (RuntimeException | LinkageError failure) {
                 // A renderer fault must not take down the whole Minecraft client.
@@ -72,6 +74,10 @@ public final class VoxyRenderBridge {
 
     /** Disable drawing immediately; backend destruction must happen on the render thread. */
     public static void disable() { enabled = false; }
+
+    public static void setEnabled(boolean value) {
+        if (value) enable(); else disable();
+    }
 
     /** Render-thread-only explicit teardown, before the GLES context is destroyed. */
     public static void detach() {

@@ -9,7 +9,7 @@ checks = {
     'enable restores render gate': 'enabled = true;' in bridge,
     'enable resets backend initialization state': 'autoCreateAttempted = false;' in bridge and 'nextCreateAttemptNanos = 0L;' in bridge,
     'new connection event registered': 'ClientPlayConnectionEvents.JOIN.register' in client,
-    'join event re-enables rendering': 'VoxyRenderBridge.enable();' in client,
+    'join event restores the saved render toggle': 'VoxyRenderBridge.setEnabled(VoxyMobileConfig.enabled);' in client,
     'disconnect still disables rendering': 'VoxyRenderBridge.disable();' in client,
     'disconnect still schedules teardown': 'client.execute(() -> {' in client and 'VoxyRenderBridge.detach();' in client,
 }

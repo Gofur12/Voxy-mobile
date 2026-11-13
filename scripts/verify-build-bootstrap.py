@@ -20,7 +20,7 @@ checks = {
     'Gradle check depends on JAR verification': "dependsOn tasks.named('verifyFabricJar')" in build,
     'build script accepts the bootstrapped Gradle executable': '"$GRADLE" --no-daemon clean build' in script,
     'GitHub Actions workflow runs the real Loom build': 'gradle --no-daemon clean build' in workflow,
-    'GitHub Actions workflow uploads the exact stage JAR': 'VoxyMobileCore-0.1.0-stage29.jar' in workflow,
+    'GitHub Actions workflow uploads the exact stage JAR': 'VoxyMobileCore-0.1.0-stage30.jar' in workflow,
 }
 for label, ok in checks.items():
     print(('PASS: ' if ok else 'FAIL: ') + label)

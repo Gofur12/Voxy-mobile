@@ -25,7 +25,7 @@ public final class VoxyChunkBridge {
     private static final int DELTA_CAPACITY = 2048;
     private static final Map<Long, VoxelChunkSnapshot> SNAPSHOTS = new HashMap<>();
     // Keep a bounded history after vanilla unloads chunks so distant terrain can still be represented by LOD.
-    private static final int MAX_LOD_HISTORY_CHUNKS = 128;
+    private static final int MAX_LOD_HISTORY_CHUNKS = 256;
     private static final LinkedHashMap<Long, VoxelChunkSnapshot> LOD_HISTORY = new LinkedHashMap<>();
     private static final Map<Long, BlockChangeAccumulator> PENDING = new HashMap<>();
     private static final Map<Long, Long> REVISIONS = new HashMap<>();

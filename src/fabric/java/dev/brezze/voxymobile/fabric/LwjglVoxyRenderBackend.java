@@ -40,7 +40,7 @@ public final class LwjglVoxyRenderBackend implements VoxyRenderBackend {
             terrain = new VoxelTerrainRenderer(gl, gpu,
                     readResource("/assets/voxymobile/shaders/voxel_terrain.vsh"),
                     readResource("/assets/voxymobile/shaders/voxel_terrain.fsh"));
-            System.out.println("[VoxyMobile] Heightfield LOD renderer initialized (bounded 128-chunk history)");
+            System.out.println("[VoxyMobile] Heightfield LOD renderer initialized (bounded 256-chunk history)");
             return new LwjglVoxyRenderBackend(gpu, terrain);
         } catch (RuntimeException | Error failure) {
             if (terrain != null) terrain.close();
@@ -56,8 +56,9 @@ public final class LwjglVoxyRenderBackend implements VoxyRenderBackend {
     @Override public void renderFrame(WorldRenderContext context,
                                       dev.brezze.voxymobile.render.CameraFrame camera) {
         if (closed) return;
-        int tiles = lodRenderer.render(VoxyChunkBridge.getLodSnapshots(),
-                camera.viewProjection(), camera.x(), camera.y(), camera.z());
+        int tiles = VoxyMobileConfig.lodEnabled
+                ? lodRenderer.render(VoxyChunkBridge.getLodSnapshots(), camera.viewProjection(), camera.x(), camera.y(), camera.z())
+                : 0;
         long now = System.nanoTime();
         if (tiles != lastLoggedTiles || now - lastStatsLogNanos > 5_000_000_000L) {
             System.out.println("[VoxyMobile] Heightfield LOD tiles drawn: " + tiles

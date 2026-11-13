@@ -59,7 +59,12 @@ public final class LodHeightfieldRenderer implements AutoCloseable {
             double dz = distanceToInterval(cameraZ, minZ, maxZ);
             return dx * dx + dz * dz >= minLodDistance * minLodDistance;
         };
-        List<LodTile> selected = selector.select(cameraX, cameraZ, MAX_RADIUS_CHUNKS, outsideVanilla);
+        // A LOD ring cannot exist when its radius is equal to or smaller than vanilla's
+        // view distance. Keep at least an eight-chunk outer band, within the mobile cap.
+        int configuredRadius = Math.max(1, VoxyMobileConfig.radiusChunks);
+        int effectiveRadius = Math.min(MAX_RADIUS_CHUNKS,
+                Math.max(configuredRadius, vanillaDistance + 8));
+        List<LodTile> selected = selector.select(cameraX, cameraZ, effectiveRadius, outsideVanilla);
         Set<Long> active = new HashSet<>();
         int drawn = 0;
         for (LodTile tile : selected) {
