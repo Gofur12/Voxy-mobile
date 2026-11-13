@@ -5,6 +5,8 @@ root = Path(__file__).resolve().parents[1]
 chunk = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/VoxyChunkBridge.java').read_text()
 bridge = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/VoxyRenderBridge.java').read_text()
 client = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/VoxyMobileClient.java').read_text()
+lod = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/LodHeightfieldRenderer.java').read_text()
+backend = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/LwjglVoxyRenderBackend.java').read_text()
 mixin = (root / 'src/fabric/java/dev/brezze/voxymobile/fabric/mixin/ClientWorldMixin.java').read_text()
 checks = {
     'world identity reset on chunk load': 'ensureWorld(world);' in chunk.split('public static void onChunkLoad', 1)[1].split('public static void onChunkUnload', 1)[0],
@@ -17,6 +19,10 @@ checks = {
     'chunk lifecycle events registered': 'ClientChunkEvents.CHUNK_LOAD.register' in client and 'ClientChunkEvents.CHUNK_UNLOAD.register' in client,
     'block mutation mixin matches two-int target descriptor': 'int maxUpdateDepth, CallbackInfoReturnable<Boolean> cir' in mixin,
     'block mutation mixin only forwards successful updates': 'Boolean.TRUE.equals(cir.getReturnValue())' in mixin,
+    'bounded chunk history survives vanilla unload': 'MAX_LOD_HISTORY_CHUNKS = 128' in chunk and 'rememberForLod(key, snapshot)' in chunk,
+    'LOD selector is wired into live renderer': 'selector.select(cameraX, cameraZ' in lod and 'TerrainLodMesher.build' in lod,
+    'LOD renderer draws retained snapshots': 'VoxyChunkBridge.getLodSnapshots()' in backend and 'lodRenderer.render' in backend,
+    'LOD falls back to smaller tiles for sparse history': 'drawWithFallback' in lod and 'tile.level - 1' in lod,
 }
 for label, passed in checks.items():
     print(('PASS' if passed else 'FAIL') + ': ' + label)

@@ -1,14 +1,10 @@
 package dev.brezze.voxymobile.fabric;
 
-import dev.brezze.voxymobile.android.AndroidPerformanceProfile;
 import dev.brezze.voxymobile.gpu.gles.GlesRuntimeInfo;
 import dev.brezze.voxymobile.gpu.gles.GlesStartupCheck;
 import dev.brezze.voxymobile.gpu.gles.OpenGles32GpuDevice;
 import dev.brezze.voxymobile.gpu.gles.VoxelTerrainRenderer;
 import dev.brezze.voxymobile.gpu.gles.lwjgl.LwjglGles32Api;
-import dev.brezze.voxymobile.mesh.VoxyMobileRuntime;
-import dev.brezze.voxymobile.render.ChunkRenderList;
-import dev.brezze.voxymobile.render.TerrainFrameRenderer;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 
 import java.io.ByteArrayOutputStream;
@@ -20,19 +16,15 @@ import java.nio.charset.StandardCharsets;
 public final class LwjglVoxyRenderBackend implements VoxyRenderBackend {
     private final OpenGles32GpuDevice gpu;
     private final VoxelTerrainRenderer terrain;
-    private final VoxyMobileRuntime runtime;
-    private final TerrainFrameRenderer frames;
-    private long lastFrameNanos;
+    private final LodHeightfieldRenderer lodRenderer;
+    private long lastStatsLogNanos;
+    private int lastLoggedTiles = -1;
     private boolean closed;
 
-    private LwjglVoxyRenderBackend(LwjglGles32Api gl, OpenGles32GpuDevice gpu,
-                                   VoxelTerrainRenderer terrain, VoxyMobileRuntime runtime) {
+    private LwjglVoxyRenderBackend(OpenGles32GpuDevice gpu, VoxelTerrainRenderer terrain) {
         this.gpu = gpu;
         this.terrain = terrain;
-        this.runtime = runtime;
-        this.frames = new TerrainFrameRenderer(runtime, terrain);
-        this.lastFrameNanos = System.nanoTime();
-        VoxyChunkBridge.attachRuntime(runtime);
+        this.lodRenderer = new LodHeightfieldRenderer(gpu, terrain);
     }
 
     /** Must be called from WorldRenderEvents on the render thread with Minecraft's GL context current. */
@@ -44,17 +36,13 @@ public final class LwjglVoxyRenderBackend implements VoxyRenderBackend {
 
         OpenGles32GpuDevice gpu = new OpenGles32GpuDevice(gl);
         VoxelTerrainRenderer terrain = null;
-        VoxyMobileRuntime runtime = null;
         try {
             terrain = new VoxelTerrainRenderer(gl, gpu,
                     readResource("/assets/voxymobile/shaders/voxel_terrain.vsh"),
                     readResource("/assets/voxymobile/shaders/voxel_terrain.fsh"));
-            AndroidPerformanceProfile profile = AndroidPerformanceProfile.conservative(
-                    Runtime.getRuntime().availableProcessors(), Runtime.getRuntime().maxMemory());
-            runtime = new VoxyMobileRuntime(gpu, profile, 8, 24, 8L << 20);
-            return new LwjglVoxyRenderBackend(gl, gpu, terrain, runtime);
+            System.out.println("[VoxyMobile] Heightfield LOD renderer initialized (bounded 128-chunk history)");
+            return new LwjglVoxyRenderBackend(gpu, terrain);
         } catch (RuntimeException | Error failure) {
-            if (runtime != null) runtime.close();
             if (terrain != null) terrain.close();
             gpu.deleteAllMeshes();
             throw failure;
@@ -68,19 +56,23 @@ public final class LwjglVoxyRenderBackend implements VoxyRenderBackend {
     @Override public void renderFrame(WorldRenderContext context,
                                       dev.brezze.voxymobile.render.CameraFrame camera) {
         if (closed) return;
+        int tiles = lodRenderer.render(VoxyChunkBridge.getLodSnapshots(),
+                camera.viewProjection(), camera.x(), camera.y(), camera.z());
         long now = System.nanoTime();
-        double previousMillis = Math.max(0.0, (now - lastFrameNanos) / 1_000_000.0);
-        lastFrameNanos = now;
-        frames.render(new ChunkRenderList(VoxyChunkBridge.getLoadedChunkPositions()),
-                camera.viewProjection(), camera.x(), camera.y(), camera.z(), previousMillis);
+        if (tiles != lastLoggedTiles || now - lastStatsLogNanos > 5_000_000_000L) {
+            System.out.println("[VoxyMobile] Heightfield LOD tiles drawn: " + tiles
+                    + "; retained chunk snapshots: " + VoxyChunkBridge.getLodSnapshots().size());
+            lastLoggedTiles = tiles;
+            lastStatsLogNanos = now;
+        }
     }
 
     @Override public void close() {
         if (closed) return;
         closed = true;
-        VoxyChunkBridge.attachRuntime(null);
-        runtime.close(); // includes render-thread GPU mesh deletion
+        lodRenderer.close();
         terrain.close();
+        gpu.deleteAllMeshes();
     }
 
     private static String readResource(String path) {

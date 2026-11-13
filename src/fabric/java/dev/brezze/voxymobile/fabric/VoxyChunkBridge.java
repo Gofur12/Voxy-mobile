@@ -14,6 +14,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.chunk.WorldChunk;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Iterator;
 import java.util.ArrayList;
 import java.util.List;
@@ -23,6 +24,9 @@ import java.util.Map;
 public final class VoxyChunkBridge {
     private static final int DELTA_CAPACITY = 2048;
     private static final Map<Long, VoxelChunkSnapshot> SNAPSHOTS = new HashMap<>();
+    // Keep a bounded history after vanilla unloads chunks so distant terrain can still be represented by LOD.
+    private static final int MAX_LOD_HISTORY_CHUNKS = 128;
+    private static final LinkedHashMap<Long, VoxelChunkSnapshot> LOD_HISTORY = new LinkedHashMap<>();
     private static final Map<Long, BlockChangeAccumulator> PENDING = new HashMap<>();
     private static final Map<Long, Long> REVISIONS = new HashMap<>();
     private static VoxyMobileRuntime runtime;
@@ -60,6 +64,7 @@ public final class VoxyChunkBridge {
         };
         VoxelChunkSnapshot snapshot = ChunkIngestor.ingest(cx, cz, revision, source);
         SNAPSHOTS.put(key, snapshot);
+        rememberForLod(key, snapshot);
         PENDING.remove(key);
         if (runtime != null) runtime.submit(snapshot);
     }
@@ -103,6 +108,7 @@ public final class VoxyChunkBridge {
             long revision = nextRevision(entry.getKey());
             VoxelChunkSnapshot updated = entry.getValue().applyTo(current, revision);
             SNAPSHOTS.put(entry.getKey(), updated);
+            rememberForLod(entry.getKey(), updated);
             if (runtime != null) runtime.submit(updated);
             it.remove();
         }
@@ -114,6 +120,11 @@ public final class VoxyChunkBridge {
     }
 
     /** Client-thread snapshot of loaded chunk coordinates for the render-frame bridge. */
+    /** Immutable point-in-time list of loaded and recently unloaded snapshots for distant LOD. */
+    public static List<VoxelChunkSnapshot> getLodSnapshots() {
+        return new ArrayList<>(LOD_HISTORY.values());
+    }
+
     public static List<ChunkPos> getLoadedChunkPositions() {
         List<ChunkPos> result = new ArrayList<>(SNAPSHOTS.size());
         for (long packed : SNAPSHOTS.keySet()) result.add(new ChunkPos((int) (packed >> 32), (int) packed));
@@ -122,6 +133,7 @@ public final class VoxyChunkBridge {
 
     public static void clear() {
         SNAPSHOTS.clear();
+        LOD_HISTORY.clear();
         PENDING.clear();
         REVISIONS.clear();
         activeWorld = null;
@@ -138,10 +150,20 @@ public final class VoxyChunkBridge {
             }
         }
         SNAPSHOTS.clear();
+        LOD_HISTORY.clear();
         PENDING.clear();
         // Keep revisions monotonic while the runtime remains attached. Reusing revision 1
         // after a dimension swap could let a stale worker result overwrite a new chunk mesh.
         activeWorld = world;
+    }
+
+    private static void rememberForLod(long key, VoxelChunkSnapshot snapshot) {
+        LOD_HISTORY.remove(key);
+        LOD_HISTORY.put(key, snapshot);
+        while (LOD_HISTORY.size() > MAX_LOD_HISTORY_CHUNKS) {
+            Long eldest = LOD_HISTORY.keySet().iterator().next();
+            LOD_HISTORY.remove(eldest);
+        }
     }
 
     private static long nextRevision(long key) {

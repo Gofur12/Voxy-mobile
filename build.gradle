@@ -2,7 +2,7 @@ plugins {
     id 'fabric-loom' version '1.6.12'
 }
 
-version = '0.1.0-stage27'
+version = '0.1.0-stage28'
 group = 'dev.brezze'
 
 repositories {
@@ -73,6 +73,7 @@ tasks.register('verifyFabricJar') {
                 'assets/voxymobile/shaders/voxel_terrain.vsh',
                 'assets/voxymobile/shaders/voxel_terrain.fsh',
                 'dev/brezze/voxymobile/fabric/VoxyMobileClient.class',
+                'dev/brezze/voxymobile/fabric/LodHeightfieldRenderer.class',
                 'dev/brezze/voxymobile/fabric/mixin/ClientWorldMixin.class'
             ] as Set
             def missing = required - names
