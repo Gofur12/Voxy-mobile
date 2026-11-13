@@ -24,6 +24,7 @@ checks = {
     'chunk bridge reads world build height': 'world.getBottomY()' in chunk and 'world.getHeight()' in chunk,
     'block state raw ID conversion is used': 'Block.getRawIdFromState(state)' in chunk,
     'mixin targets ClientWorld.setBlockState': '@Mixin(ClientWorld.class)' in mixin and 'method = "setBlockState"' in mixin,
+    'mixin matches 1.20.1 setBlockState descriptor (two int args)': 'int flags,' in mixin and 'int maxUpdateDepth, CallbackInfoReturnable<Boolean> cir' in mixin,
     'mixin forwards only successful state changes': 'Boolean.TRUE.equals(cir.getReturnValue())' in mixin,
     'no post-1.20.1 positionMatrix context accessor': 'context.positionMatrix()' not in context,
 }

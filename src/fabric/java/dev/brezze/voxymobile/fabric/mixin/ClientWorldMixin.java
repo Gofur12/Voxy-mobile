@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class ClientWorldMixin {
     @Inject(method = "setBlockState", at = @At("RETURN"))
     private void voxymobile$afterSetBlockState(BlockPos pos, BlockState state, int flags,
-                                               CallbackInfoReturnable<Boolean> cir) {
+                                               int maxUpdateDepth, CallbackInfoReturnable<Boolean> cir) {
         if (Boolean.TRUE.equals(cir.getReturnValue())) {
             VoxyChunkBridge.onBlockChanged((ClientWorld) (Object) this, pos, state);
         }

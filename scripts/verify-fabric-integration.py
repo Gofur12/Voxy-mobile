@@ -15,6 +15,7 @@ checks = {
     'backend initialization has bounded retry delay': 'CREATE_RETRY_DELAY_NANOS = 2_000_000_000L' in bridge and 'now >= nextCreateAttemptNanos' in bridge,
     'retry timestamp reset on detach': 'nextCreateAttemptNanos = 0L;' in bridge,
     'chunk lifecycle events registered': 'ClientChunkEvents.CHUNK_LOAD.register' in client and 'ClientChunkEvents.CHUNK_UNLOAD.register' in client,
+    'block mutation mixin matches two-int target descriptor': 'int maxUpdateDepth, CallbackInfoReturnable<Boolean> cir' in mixin,
     'block mutation mixin only forwards successful updates': 'Boolean.TRUE.equals(cir.getReturnValue())' in mixin,
 }
 for label, passed in checks.items():

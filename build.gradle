@@ -2,7 +2,7 @@ plugins {
     id 'fabric-loom' version '1.6.12'
 }
 
-version = '0.1.0-stage26'
+version = '0.1.0-stage27'
 group = 'dev.brezze'
 
 repositories {
