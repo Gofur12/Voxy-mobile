@@ -1,7 +1,13 @@
+
 {
   "required": true,
   "package": "dev.brezze.voxymobile.fabric.mixin",
   "compatibilityLevel": "JAVA_17",
-  "client": ["ClientWorldMixin"],
-  "injectors": { "defaultRequire": 1 }
+  "client": [
+    "ClientWorldMixin",
+    "ScreenAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
