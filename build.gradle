@@ -1,0 +1,96 @@
+plugins {
+    id 'fabric-loom' version '1.6.12'
+}
+
+version = '0.1.0-stage26'
+group = 'dev.brezze'
+
+repositories {
+    maven { url = 'https://maven.fabricmc.net/' }
+    mavenCentral()
+}
+
+dependencies {
+    minecraft 'com.mojang:minecraft:1.20.1'
+    mappings 'net.fabricmc:yarn:1.20.1+build.10:v2'
+    modImplementation 'net.fabricmc:fabric-loader:0.15.11'
+    modImplementation 'net.fabricmc.fabric-api:fabric-api:0.92.2+1.20.1'
+}
+
+sourceSets {
+    main {
+        java.srcDirs = ['src/main/java', 'src/fabric/java']
+        resources.srcDirs = ['src/main/resources', 'src/fabric/resources']
+    }
+    test { java.srcDirs = ['src/test/java'] }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    options.encoding = 'UTF-8'
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand(version: project.version) }
+}
+
+jar { from('LICENSE') { rename { "${it}_${project.base.archivesName.get()}" } } }
+
+
+tasks.register('verifyJavaRuntime') {
+    group = 'verification'
+    description = 'Checks that the build is running on a supported Java runtime.'
+    doLast {
+        if (JavaVersion.current() < JavaVersion.VERSION_17) {
+            throw new GradleException("Voxy Mobile requires Java 17 or newer; found ${JavaVersion.current()}")
+        }
+        logger.lifecycle("Voxy Mobile build JVM: ${System.getProperty('java.version')} (Java 17+ contract satisfied)")
+    }
+}
+
+tasks.register('verifyFabricJar') {
+    group = 'verification'
+    description = 'Checks the remapped Fabric mod JAR and its required runtime resources.'
+    dependsOn tasks.named('remapJar')
+    doLast {
+        def jarFile = layout.buildDirectory.file("libs/${project.name}-${project.version}.jar").get().asFile
+        if (!jarFile.isFile()) {
+            throw new GradleException("Expected remapped Fabric JAR was not produced: ${jarFile}")
+        }
+        def zip = new java.util.zip.ZipFile(jarFile)
+        try {
+            def names = java.util.Collections.list(zip.entries()).collect { it.name } as Set
+            def required = [
+                'fabric.mod.json',
+                'voxymobile.client.mixins.json',
+                'assets/voxymobile/shaders/voxel_terrain.vsh',
+                'assets/voxymobile/shaders/voxel_terrain.fsh',
+                'dev/brezze/voxymobile/fabric/VoxyMobileClient.class',
+                'dev/brezze/voxymobile/fabric/mixin/ClientWorldMixin.class'
+            ] as Set
+            def missing = required - names
+            if (!missing.isEmpty()) {
+                throw new GradleException('Fabric JAR is missing required entries: ' + missing.sort().join(', '))
+            }
+            def metadata = new groovy.json.JsonSlurper().parse(zip.getInputStream(zip.getEntry('fabric.mod.json')))
+            if (metadata.id != 'voxymobile' || metadata.version != project.version.toString()) {
+                throw new GradleException("Unexpected Fabric metadata id/version: ${metadata.id}/${metadata.version}")
+            }
+            logger.lifecycle("Fabric JAR validation: PASS (${jarFile.length()} bytes)")
+        } finally {
+            zip.close()
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('verifyJavaRuntime')
+    dependsOn tasks.named('verifyFabricJar')
+}
