@@ -1,35 +1,44 @@
-name: Build VoxyMobileCore Stage 29
+
+name: Voxy Mobile Stage 30 Build
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+    branches: [main, master]
+
+permissions:
+  contents: read
 
 jobs:
   build:
+    name: Build Fabric 1.20.1
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout source
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: gradle
 
-      - name: Grant execute permission
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Build Fabric mod
-        run: ./gradlew build --no-daemon
+      - name: Build mod
+        run: |
+          chmod +x ./gradlew
+          ./gradlew clean build --no-daemon
 
-      - name: Upload build artifacts
+      - name: Upload mod JAR
         uses: actions/upload-artifact@v4
         with:
-          name: VoxyMobileCore-stage29-fabric-1.20.1
+          name: VoxyMobile-Stage30
           path: |
             build/libs/*.jar
             !build/libs/*-sources.jar
+          if-no-files-found: error
+          retention-days: 14
